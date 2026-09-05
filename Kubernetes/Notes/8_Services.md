@@ -371,8 +371,14 @@ Too many limitations:
 
 ### Example traffic flow:
 
-```
-External Client → NodeIP:NodePort → Pod
+```mermaid
+graph LR
+    Client["External Client"] -->|"NodeIP:30080"| Node["Node"]
+    Node -->|"kube-proxy rules"| Pod["Pod:8080"]
+
+    style Client fill:#F3E5F5
+    style Node fill:#FFF3E0
+    style Pod fill:#E8F5E9
 ```
 
 ---
@@ -486,16 +492,32 @@ So external users never talk to pods directly.
 
 Structure:
 
-```
-Internet
-   ↓
-Azure Load Balancer  (type=LoadBalancer)
-   ↓
-Ingress Controller (NGINX)
-   ↓
-ClusterIP Services
-   ↓
-Pods
+```mermaid
+graph TB
+    Internet["🌐 Internet"]
+    ALB["Azure Load Balancer<br/>(type=LoadBalancer)"]
+    IC["Ingress Controller<br/>(NGINX)"]
+    SvcA["ClusterIP: api-svc"]
+    SvcB["ClusterIP: web-svc"]
+    PodA1["api pod 1"]
+    PodA2["api pod 2"]
+    PodB1["web pod 1"]
+
+    Internet --> ALB --> IC
+    IC -->|"/api"| SvcA
+    IC -->|"/"| SvcB
+    SvcA --> PodA1
+    SvcA --> PodA2
+    SvcB --> PodB1
+
+    style Internet fill:#F3E5F5
+    style ALB fill:#FFCDD2
+    style IC fill:#FFF3E0
+    style SvcA fill:#E3F2FD
+    style SvcB fill:#E3F2FD
+    style PodA1 fill:#E8F5E9
+    style PodA2 fill:#E8F5E9
+    style PodB1 fill:#E8F5E9
 ```
 
 ---

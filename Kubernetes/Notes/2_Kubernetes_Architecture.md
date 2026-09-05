@@ -260,3 +260,93 @@ When you apply a YAML file, say a Deployment:
 11. If a node dies → scheduler reschedules pods elsewhere
 
 ---
+
+# 📊 Architecture Diagram (Visual)
+
+```mermaid
+graph TB
+    User["kubectl / API client"]
+    
+    subgraph ControlPlane["Control Plane"]
+        API["API Server<br/>(single entry point)"]
+        ETCD["etcd<br/>(source of truth)"]
+        Sched["Scheduler<br/>(picks nodes)"]
+        CM["Controller Manager<br/>(reconciliation loops)"]
+        CCM["Cloud Controller<br/>(LB, disks, nodes)"]
+        
+        API <--> ETCD
+        API <--> Sched
+        API <--> CM
+        API <--> CCM
+    end
+
+    subgraph Worker1["Worker Node 1"]
+        Kubelet1["Kubelet"]
+        KProxy1["kube-proxy"]
+        CRI1["Container Runtime<br/>(containerd)"]
+        Pod1A["Pod A"]
+        Pod1B["Pod B"]
+        
+        Kubelet1 --> CRI1 --> Pod1A
+        CRI1 --> Pod1B
+    end
+
+    subgraph Worker2["Worker Node 2"]
+        Kubelet2["Kubelet"]
+        KProxy2["kube-proxy"]
+        CRI2["Container Runtime<br/>(containerd)"]
+        Pod2A["Pod C"]
+        
+        Kubelet2 --> CRI2 --> Pod2A
+    end
+
+    CNI["CNI Plugin<br/>(Calico/Cilium/Flannel)"]
+
+    User --> API
+    API --> Kubelet1
+    API --> Kubelet2
+    CNI --- Pod1A
+    CNI --- Pod1B
+    CNI --- Pod2A
+
+    style ControlPlane fill:#E3F2FD
+    style Worker1 fill:#E8F5E9
+    style Worker2 fill:#E8F5E9
+```
+
+# 📊 Deployment Flow (Visual)
+
+```mermaid
+sequenceDiagram
+    participant User as kubectl apply
+    participant API as API Server
+    participant ETCD as etcd
+    participant DC as Deployment Controller
+    participant RS as ReplicaSet Controller
+    participant Sched as Scheduler
+    participant KL as Kubelet
+    participant CRI as containerd
+    participant CNI as CNI Plugin
+    participant KP as kube-proxy
+
+    User->>API: Create Deployment
+    API->>ETCD: Store Deployment spec
+    API-->>DC: Notify: new Deployment
+    DC->>API: Create ReplicaSet
+    API->>ETCD: Store ReplicaSet
+    API-->>RS: Notify: new ReplicaSet
+    RS->>API: Create Pod (Pending)
+    API->>ETCD: Store Pod
+    API-->>Sched: Notify: unscheduled Pod
+    Sched->>API: Bind Pod to Node
+    API-->>KL: Notify: Pod assigned
+    KL->>CRI: Create container sandbox
+    KL->>CNI: Assign Pod IP
+    CRI->>CRI: Pull image + start container
+    KL->>API: Report Pod Running
+    KP->>KP: Update iptables/IPVS rules
+    
+    Note over DC,KL: Controllers continuously reconcile<br/>desired state vs actual state
+```
+
+---

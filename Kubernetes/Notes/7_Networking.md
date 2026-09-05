@@ -308,22 +308,47 @@ Ingress examples later if you want.
 
 # 🔍 **11. Deep-Dive Diagram — Complete Networking Flow**
 
+```mermaid
+graph TB
+    Client["Client (browser)"]
+    LB["Cloud Load Balancer<br/>(LoadBalancer Service)"]
+    NP["Node: NodePort<br/>(30000-32767)"]
+    KP["kube-proxy rules<br/>(iptables / IPVS)"]
+    SVC["ClusterIP Service<br/>(virtual IP)"]
+    POD["Pod IP<br/>(selected by label)"]
+    CONT["Container<br/>(:8080)"]
+
+    Client --> LB --> NP --> KP --> SVC --> POD --> CONT
+
+    style Client fill:#F3E5F5
+    style LB fill:#FFCDD2
+    style NP fill:#FFF3E0
+    style KP fill:#FFF9C4
+    style SVC fill:#E3F2FD
+    style POD fill:#E8F5E9
+    style CONT fill:#C8E6C9
 ```
-Client (browser)
-   ↓
-Cloud Load Balancer (LoadBalancer)
-   ↓
-Node: NodePort
-   ↓
-kube-proxy rules (iptables/ipvs)
-   ↓
-ClusterIP service
-   ↓
-Pod IP (Pod selected by label selector)
-   ↓
-ContainerPort (8080)
-   ↓
-Container running in Pod
+
+```mermaid
+graph LR
+    subgraph Node1["Node 1"]
+        P1["Pod A<br/>10.244.1.2"]
+        P2["Pod B<br/>10.244.1.3"]
+        Bridge1["cni0 bridge"]
+        P1 --- Bridge1
+        P2 --- Bridge1
+    end
+
+    subgraph Node2["Node 2"]
+        P3["Pod C<br/>10.244.2.2"]
+        Bridge2["cni0 bridge"]
+        P3 --- Bridge2
+    end
+
+    Bridge1 ---|"CNI routing<br/>(VXLAN / BGP)"| Bridge2
+
+    style Node1 fill:#E3F2FD
+    style Node2 fill:#E8F5E9
 ```
 
 ---
